@@ -1,6 +1,7 @@
 package telegraph
 
 import io.circe.generic.extras._
+import io.circe.{Decoder, HCursor}
 
 package object core {
   implicit val config: Configuration = Configuration.default.withSnakeCaseKeys
@@ -26,7 +27,7 @@ package object core {
 
     case class Text(value: String) extends Node
 
-    case class Element(tag: Tag, innerNodes: Seq[Node], attrs: Seq[Attr])
+    case class Element(tag: Tag, innerNodes: List[Node], attrs: List[Attr] = Nil) extends Node
 
   }
 
@@ -65,16 +66,27 @@ package object core {
     val src: Attr = "src"
   }
 
-  @ConfiguredJsonCodec
   sealed trait Response[T] {
     val ok: Boolean
   }
 
   object Response {
 
-    case class Result[T](ok: Boolean, result: T) extends Response[T]
+    case class Result[T](result: T) extends Response[T] {
+      val ok = true
+    }
 
-    case class Error[T](ok: Boolean, error: String) extends Response[T]
+    case class Error[T](error: String) extends Response[T] {
+      val ok = false
+    }
+
+    implicit def decoder[T](implicit tDecode: Decoder[T]) = new Decoder[Response[T]] {
+      override def apply(c: HCursor) = c.get[Boolean]("ok") match {
+        case Right(true) => c.get[T]("result").map(Result.apply)
+        case Right(false) => c.get[String]("error").map(Error.apply)
+        case Left(failure) => Left(failure)
+      }
+    }
 
   }
 

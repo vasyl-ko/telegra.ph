@@ -1,7 +1,11 @@
 val globalSettings = Seq[SettingsDefinition](
   version := "0.1",
   scalaVersion := "2.12.4",
-  scalacOptions in ThisBuild ++= Seq("-feature", "-deprecation")
+  scalacOptions in ThisBuild ++= Seq("-unchecked", "-feature", "-deprecation"),
+    libraryDependencies ++= Seq(
+    "org.scalactic" %% "scalactic" % "3.0.4",
+    "org.scalatest" %% "scalatest" % "3.0.4" % "test"
+  )
 )
 
 lazy val core = Project("core", file("core"))

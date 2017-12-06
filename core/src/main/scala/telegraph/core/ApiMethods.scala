@@ -18,31 +18,32 @@ trait ApiMethods {
       .map(parse(_) flatMap decoder.decodeJson)
       .collect {
         case Right(response) => response
+        case Left(error) => throw error
       }
 
   protected def executeMethodWithPath[T](method: String, path: String)(params: Map[String, String])
                                         (implicit decoder: Decoder[Response[T]]): Future[Response[T]] =
-    executeRequest(apiRoot + s"/$method${if (path.nonEmpty) s"/$path" else ""}?${params.map(t => s"${t._1}=${t._2}").mkString("&")}")
+    executeRequest(apiRoot + s"/$method${if (path.nonEmpty) s"/$path" else ""}?${params.map { case (key, value) => s"$key=$value" }.mkString("&")}")
 
   protected def executeMethod[T](method: String)(params: Map[String, String])(implicit decoder: Decoder[Response[T]]): Future[Response[T]] =
     executeMethodWithPath[T](method, "")(params)
 
-  def createAccount(shortName: String, authorName: String, authorUrl: String)
+  def createAccount(shortName: String, authorName: String, authorUrl: Option[String] = None)
                    (implicit decoder: Decoder[Response[Account]]): Future[Response[Account]] =
     executeMethod("createAccount")(Map(
       "short_name" -> shortName,
-      "author_name" -> authorName,
-      "author_url" -> authorUrl
-    ))
+      "author_name" -> authorName) ++
+      authorUrl.map("author_url" -> _)
+    )
 
-  def editAccountInfo(accessToken: String)(shortName: String, authorName: String, authorUrl: String)
+  def editAccountInfo(accessToken: String)(shortName: String, authorName: String, authorUrl: Option[String] = None)
                      (implicit decoder: Decoder[Response[Account]]): Future[Response[Account]] =
     executeMethod("editAccountInfo")(Map(
       "access_token" -> accessToken,
       "short_name" -> shortName,
-      "author_name" -> authorName,
-      "author_url" -> authorUrl
-    ))
+      "author_name" -> authorName) ++
+      authorUrl.map("author_url" -> _)
+    )
 
   def getAccountInfo(accessToken: String)(withAuthUrl: Boolean = false, withPageCount: Boolean = false)
                     (implicit decoder: Decoder[Response[Account]]): Future[Response[Account]] =
